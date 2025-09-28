@@ -74,9 +74,9 @@ class VRPLogger:
             handlers=[]
         )
         
-        # Add console handler (show INFO+ but not DEBUG steps)
+        # Add console handler (show only terminal-specific output)
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, log_level.upper()))
+        console_handler.setLevel(logging.ERROR)  # Only show errors on terminal
         console_formatter = logging.Formatter('%(message)s')
         console_handler.setFormatter(console_formatter)
         

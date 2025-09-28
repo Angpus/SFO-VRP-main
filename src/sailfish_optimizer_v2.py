@@ -112,13 +112,19 @@ class SailfishVRPOptimizerV2:
                 A=self.A
             )
             
+            # Print terminal output for each iteration
+            best_sailfish_idx = self.population_manager.sailfish_fitness.index(min(self.population_manager.sailfish_fitness))
+            self.results_reporter.print_terminal_iteration_best(
+                iteration, self.population_manager.best_fitness, best_sailfish_idx, self.population_manager.best_routes
+            )
+            
             # Only stop if sardines are empty or max iterations reached
             # Convergence check removed as per user request
         
         # Get final results
         final_results = self.iteration_runner.get_final_results(self.population_manager)
         
-        # Print final results
+        # Print final results to file
         self.results_reporter.print_final_results(
             final_results=final_results,
             depot_data=self.population_manager.depot_data,

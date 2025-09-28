@@ -83,7 +83,8 @@ class PositionUpdater:
             update_positions = population_manager.sorted_sailfish_positions
         else:
             logger.info("ITERATION > 0: Using replacement-specific positions for updates...")
-            update_positions = self._get_replacement_positions(population_manager, original_positions)
+            # Use sorted positions as the base for non-replaced sailfish
+            update_positions = self._get_replacement_positions(population_manager, population_manager.sorted_sailfish_positions)
         
         new_sailfish_positions = []
         
@@ -113,20 +114,20 @@ class PositionUpdater:
         logger.info("\nAll sailfish positions updated!")
         return new_sailfish_positions
     
-    def _get_replacement_positions(self, population_manager, original_positions: List[List[float]]) -> List[List[float]]:
+    def _get_replacement_positions(self, population_manager, sorted_positions: List[List[float]]) -> List[List[float]]:
         """
         Get the appropriate positions for sailfish updates based on replacements.
         
         Args:
             population_manager: Population manager with replacement tracking
-            original_positions: Original positions as fallback
+            sorted_positions: Sorted positions (original sailfish positions sorted by fitness)
             
         Returns:
             List of positions to use for updates
         """
         replacement_positions = []
         
-        for k in range(len(original_positions)):
+        for k in range(len(sorted_positions)):
             if k in population_manager.sailfish_replacement_map:
                 # This sailfish was replaced by a sardine, use the sardine's position
                 sardine_idx = population_manager.sailfish_replacement_map[k]
@@ -135,13 +136,13 @@ class PositionUpdater:
                     replacement_positions.append(population_manager.sardine_positions_before_removal[sardine_idx])
                     logger.info(f"SF{k+1} was replaced by S{sardine_idx+1}, using S{sardine_idx+1} position")
                 else:
-                    # Fallback to original position if sardine position not found
-                    replacement_positions.append(original_positions[k])
-                    logger.info(f"SF{k+1} was replaced by S{sardine_idx+1}, but S{sardine_idx+1} position not found, using original position")
+                    # Fallback to sorted position if sardine position not found
+                    replacement_positions.append(sorted_positions[k])
+                    logger.info(f"SF{k+1} was replaced by S{sardine_idx+1}, but S{sardine_idx+1} position not found, using sorted position")
             else:
-                # This sailfish was not replaced, use its original position
-                replacement_positions.append(original_positions[k])
-                logger.info(f"SF{k+1} was not replaced, using original position")
+                # This sailfish was not replaced, use its original sorted position
+                replacement_positions.append(sorted_positions[k])
+                logger.info(f"SF{k+1} was not replaced, using original sorted position")
         
         return replacement_positions
     

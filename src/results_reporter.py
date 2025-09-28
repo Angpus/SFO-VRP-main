@@ -6,6 +6,7 @@ Handles results reporting, formatting, and output generation.
 import logging
 from typing import Dict, List
 from .utils import print_vrp_data, format_route_string, calculate_route_demand, calculate_vrp_fitness
+from .terminal_reporter import TerminalReporter
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,31 @@ class ResultsReporter:
     
     def __init__(self):
         """Initialize results reporter."""
-        pass
+        self.terminal_reporter = TerminalReporter()
+    
+    def print_terminal_data_table(self, depot_data: Dict, customers_data: List[Dict], 
+                                 max_capacity: float, max_vehicles: int) -> None:
+        """Print VRP data table for terminal only."""
+        self.terminal_reporter.print_data_table(depot_data, customers_data, max_capacity, max_vehicles)
+    
+    def print_terminal_parameters(self, algorithm_params: Dict, vrp_params: Dict) -> None:
+        """Print parameters for terminal only."""
+        self.terminal_reporter.print_parameters(algorithm_params, vrp_params)
+    
+    def print_terminal_iteration_best(self, iteration: int, best_fitness: float, 
+                                    best_sailfish_idx: int, best_routes: List[List[int]]) -> None:
+        """Print iteration best for terminal only."""
+        self.terminal_reporter.print_iteration_best(iteration, best_fitness, best_sailfish_idx, best_routes)
+    
+    def print_terminal_final_routes(self, best_routes: List[List[int]], 
+                                   depot_data: Dict, customers_data: List[Dict], 
+                                   max_capacity: float) -> None:
+        """Print final routes table for terminal only."""
+        self.terminal_reporter.print_final_routes_table(best_routes, depot_data, customers_data, max_capacity)
+    
+    def print_terminal_summary(self, final_results: Dict) -> None:
+        """Print optimization summary for terminal only."""
+        self.terminal_reporter.print_optimization_summary(final_results)
     
     def print_initial_parameters(self, 
                                problem_size: int,
@@ -29,18 +54,18 @@ class ResultsReporter:
                                max_capacity: float,
                                max_vehicles: int) -> None:
         """Print initial parameters and VRP data."""
-        logger.debug("\n" + "="*80)
-        logger.debug("1. INITIAL VARIABLES AND VRP DATA")
-        logger.debug("="*80)
+        logger.info("\n" + "="*80)
+        logger.info("1. INITIAL VARIABLES AND VRP DATA")
+        logger.info("="*80)
         
-        logger.debug(f"Initial Parameters:")
-        logger.debug(f"- Problem size: {problem_size} customers")
-        logger.debug(f"- Sailfish population: {n_sailfish}")
-        logger.debug(f"- Sardine population: {n_sardines}")
-        logger.debug(f"- Maximum iterations: {max_iter}")
-        logger.debug(f"- Parameter A: {A}")
-        logger.debug(f"- Epsilon: {epsilon}")
-        logger.debug("")
+        logger.info(f"Initial Parameters:")
+        logger.info(f"- Problem size: {problem_size} customers")
+        logger.info(f"- Sailfish population: {n_sailfish}")
+        logger.info(f"- Sardine population: {n_sardines}")
+        logger.info(f"- Maximum iterations: {max_iter}")
+        logger.info(f"- Parameter A: {A}")
+        logger.info(f"- Epsilon: {epsilon}")
+        logger.info("")
         
         print_vrp_data(depot_data, customers_data, max_capacity, max_vehicles)
     
@@ -49,33 +74,33 @@ class ResultsReporter:
                                sardine_random_values: List[List[float]],
                                problem_size: int) -> None:
         """Print random values for sailfish and sardines."""
-        logger.debug("\n" + "="*80)
-        logger.debug("2. RANDOM SAILFISH AND SARDINES")
-        logger.debug("="*80)
+        logger.info("\n" + "="*80)
+        logger.info("2. RANDOM SAILFISH AND SARDINES")
+        logger.info("="*80)
         
-        logger.debug("SAILFISH Random Values:")
+        logger.info("SAILFISH Random Values:")
         header = f"{'ID':<8}"
         for i in range(problem_size):
             header += f"C{i+1:2}   "
-        logger.debug(header)
+        logger.info(header)
         
         for i, values in enumerate(sailfish_random_values):
             row = f"SF{i+1:<6}"
             for val in values:
                 row += f"{val:5.3f} "
-            logger.debug(row)
+            logger.info(row)
         
-        logger.debug("\nSARDINE Random Values:")
+        logger.info("\nSARDINE Random Values:")
         header = f"{'ID':<8}"
         for i in range(problem_size):
             header += f"C{i+1:2}   "
-        logger.debug(header)
+        logger.info(header)
         
         for i, values in enumerate(sardine_random_values):
             row = f"S{i+1:<7}"
             for val in values:
                 row += f"{val:5.3f} "
-            logger.debug(row)
+            logger.info(row)
     
     def print_routes_and_solutions(self, 
                                  sailfish_random_values: List[List[float]],
@@ -88,44 +113,44 @@ class ResultsReporter:
                                  max_vehicles: int,
                                  current_iteration: int = 0) -> None:
         """Print routes for each sailfish and sardine."""
-        logger.debug("\n" + "="*80)
+        logger.info("\n" + "="*80)
         if current_iteration == 0:
-            logger.debug("3. ROUTES FOR EACH SAILFISH AND SARDINE")
+            logger.info("3. ROUTES FOR EACH SAILFISH AND SARDINE")
         else:
-            logger.debug(f"ITERATION {current_iteration} - STEP 1: GENERATING NEW ROUTES")
-        logger.debug("="*80)
+            logger.info(f"ITERATION {current_iteration} - STEP 1: GENERATING NEW ROUTES")
+        logger.info("="*80)
         
-        logger.debug("SAILFISH Routes:")
+        logger.info("SAILFISH Routes:")
         for i, (random_vals, routes) in enumerate(zip(sailfish_random_values, sailfish_routes)):
-            logger.debug(f"\n===== SF{i+1} ====================================================")
+            logger.info(f"\n===== SF{i+1} ====================================================")
             
-            logger.debug(f"Random values: {random_vals}")
+            logger.info(f"Random values: {random_vals}")
             route_info = f"Routes (with depot returns): "
             for j, route in enumerate(routes):
                 route_str = format_route_string(route)
                 route_info += f"Route{j+1}: {route_str}  "
-            logger.debug(route_info)
+            logger.info(route_info)
             
             # Calculate route capacities
             for j, route in enumerate(routes):
                 total_demand = calculate_route_demand(route, customers_data)
-                logger.debug(f"Route{j+1} demand: {total_demand}/{max_capacity}")
+                logger.info(f"Route{j+1} demand: {total_demand}/{max_capacity}")
         
-        logger.debug("\nSARDINE Routes:")
+        logger.info("\nSARDINE Routes:")
         for i, (random_vals, routes) in enumerate(zip(sardine_random_values, sardine_routes)):
-            logger.debug(f"\n===== S{i+1} ====================================================")
+            logger.info(f"\n===== S{i+1} ====================================================")
             
-            logger.debug(f"Random values: {random_vals}")
+            logger.info(f"Random values: {random_vals}")
             route_info = f"Routes (with depot returns): "
             for j, route in enumerate(routes):
                 route_str = format_route_string(route)
                 route_info += f"Route{j+1}: {route_str}  "
-            logger.debug(route_info)
+            logger.info(route_info)
             
             # Calculate route capacities
             for j, route in enumerate(routes):
                 total_demand = calculate_route_demand(route, customers_data)
-                logger.debug(f"Route{j+1} demand: {total_demand}/{max_capacity}")
+                logger.info(f"Route{j+1} demand: {total_demand}/{max_capacity}")
     
     def print_fitness_summary(self, 
                             sailfish_fitness: List[float],
@@ -134,24 +159,24 @@ class ResultsReporter:
                             best_routes: List[List[int]],
                             current_iteration: int = 0) -> None:
         """Print summary of all fitness scores."""
-        logger.debug(f"\n" + "="*80)
+        logger.info(f"\n" + "="*80)
         if current_iteration == 0:
-            logger.debug("FITNESS SUMMARY")
+            logger.info("4. FITNESS SUMMARY")
         else:
-            logger.debug(f"ITERATION {current_iteration} - STEP 3: FITNESS SUMMARY")
-        logger.debug("="*80)
+            logger.info(f"ITERATION {current_iteration} - STEP 3: FITNESS SUMMARY")
+        logger.info("="*80)
         
-        logger.debug("SAILFISH FITNESS SCORES:")
-        logger.debug("-" * 30)
+        logger.info("SAILFISH FITNESS SCORES:")
+        logger.info("-" * 30)
         for i, fitness in enumerate(sailfish_fitness):
             marker = " ⭐ BEST" if fitness == min(sailfish_fitness) else ""
-            logger.debug(f"SF{i+1}: {fitness:.3f}{marker}")
+            logger.info(f"SF{i+1}: {fitness:.3f}{marker}")
         
-        logger.debug("\nSARDINE FITNESS SCORES:")
-        logger.debug("-" * 25)
+        logger.info("\nSARDINE FITNESS SCORES:")
+        logger.info("-" * 25)
         for i, fitness in enumerate(sardine_fitness):
             marker = " ⭐ BEST" if fitness == min(sardine_fitness) else ""
-            logger.debug(f"S{i+1}: {fitness:.3f}{marker}")
+            logger.info(f"S{i+1}: {fitness:.3f}{marker}")
         
         logger.info(f"\nOVERALL SUMMARY:")
         logger.info("-" * 20)
@@ -170,15 +195,15 @@ class ResultsReporter:
                                         best_fitness: float,
                                         current_iteration: int = 0) -> None:
         """Print comprehensive results table."""
-        logger.debug(f"\n" + "="*120)
+        logger.info(f"\n" + "="*120)
         if current_iteration == 0:
-            logger.debug("COMPREHENSIVE RESULTS TABLE")
+            logger.info("5. COMPREHENSIVE RESULTS TABLE")
         else:
-            logger.debug(f"ITERATION {current_iteration} - COMPREHENSIVE RESULTS TABLE")
-        logger.debug("="*120)
+            logger.info(f"ITERATION {current_iteration} - COMPREHENSIVE RESULTS TABLE")
+        logger.info("="*120)
         
-        logger.debug(f"{'ID':<4} {'Random Values':<30} {'Routes':<40} {'Fitness':<10}")
-        logger.debug("-" * 120)
+        logger.info(f"{'ID':<4} {'Random Values':<30} {'Routes':<40} {'Fitness':<10}")
+        logger.info("-" * 120)
         
         # Sailfish table
         for i, (random_vals, routes, fitness) in enumerate(zip(sailfish_random_values, sailfish_routes, sailfish_fitness)):
@@ -186,7 +211,7 @@ class ResultsReporter:
             routes_str = str(routes)
             
             marker = " 🎯" if abs(fitness - best_fitness) < 1e-6 else ""
-            logger.debug(f"SF{i+1:<2} {random_str:<30} {routes_str:<40} {fitness:<10.3f}{marker}")
+            logger.info(f"SF{i+1:<2} {random_str:<30} {routes_str:<40} {fitness:<10.3f}{marker}")
         
         # Sardine table
         for i, (random_vals, routes, fitness) in enumerate(zip(sardine_random_values, sardine_routes, sardine_fitness)):
@@ -194,7 +219,7 @@ class ResultsReporter:
             routes_str = str(routes)
             
             marker = " 🎯" if abs(fitness - best_fitness) < 1e-6 else ""
-            logger.debug(f"S{i+1:<3} {random_str:<30} {routes_str:<40} {fitness:<10.3f}{marker}")
+            logger.info(f"S{i+1:<3} {random_str:<30} {routes_str:<40} {fitness:<10.3f}{marker}")
         
         logger.info(f"\nBest Solution: {best_fitness:.3f}")
     

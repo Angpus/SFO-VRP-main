@@ -30,6 +30,7 @@ def run_vrp_optimization(config: Dict) -> Dict:
     Returns:
         Dictionary containing optimization results
     """
+    # Log to file only
     logger.info("="*80)
     logger.info("SAILFISH VRP OPTIMIZATION SYSTEM")
     logger.info("="*80)
@@ -47,10 +48,10 @@ def run_vrp_optimization(config: Dict) -> Dict:
         config.get('max_capacity'),
         config.get('max_vehicles')
     ):
-        logger.error("VRP data validation failed!")
+        print("❌ VRP data validation failed!")
         return {}
     
-    # Print problem data
+    # Print problem data to file only (detailed output)
     print_vrp_data(depot_data, customers_data, 
                    config.get('max_capacity'), 
                    config.get('max_vehicles'))
@@ -73,9 +74,10 @@ def run_vrp_optimization(config: Dict) -> Dict:
     )
     
     # Run optimization
-    logger.info("\nStarting optimization...")
+    print("\n🚀 Starting optimization...")
     results = optimizer.run_optimization()
     
+    # Log completion to file only
     logger.info(f"\nOptimization completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return results
 
@@ -91,6 +93,7 @@ def print_results_summary(results: Dict) -> None:
         logger.error("No results to display")
         return
     
+    # Print detailed results to file
     logger.info("\n" + "="*80)
     logger.info("OPTIMIZATION RESULTS SUMMARY")
     logger.info("="*80)
@@ -137,6 +140,16 @@ def print_results_summary(results: Dict) -> None:
             results['vrp_parameters']['max_capacity'],
             results['vrp_parameters']['max_vehicles']
         )
+        
+        # Print terminal output
+        reporter.print_terminal_final_routes(
+            results['best_solution']['routes'],
+            depot_data,
+            customers_data,
+            results['vrp_parameters']['max_capacity']
+        )
+        
+        reporter.print_terminal_summary(results)
 
 
 def main():

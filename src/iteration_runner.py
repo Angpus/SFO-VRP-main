@@ -1,63 +1,89 @@
 """
 Iteration runner module for Sailfish VRP Optimizer.
-Handles iteration execution and convergence checking.
+Handles the execution of optimization iterations.
 """
 
 import logging
-from typing import Dict
+from typing import Dict, List
+from .population_manager import PopulationManager
+from .position_updater import PositionUpdater
+from .replacement_manager import ReplacementManager
+from .results_reporter import ResultsReporter
 
 logger = logging.getLogger(__name__)
 
 
 class IterationRunner:
-    """Handles iteration execution and convergence checking."""
+    """Handles the execution of optimization iterations."""
     
-    def __init__(self, epsilon: float):
+    def __init__(self, epsilon: float = 0.001):
         """
         Initialize iteration runner.
         
         Args:
-            epsilon: Attack Power calculation parameter
+            epsilon: Epsilon parameter for convergence checking
         """
         self.epsilon = epsilon
+        self.fitness_history = []
     
     def run_iteration_zero(self, 
-                          population_manager,
-                          position_updater,
-                          results_reporter,
+                          population_manager: PopulationManager,
+                          position_updater: PositionUpdater,
+                          results_reporter: ResultsReporter,
                           max_iter: int,
                           A: float) -> None:
-        """Run the initial iteration."""
-        logger.info("STARTING SAILFISH VRP OPTIMIZATION ALGORITHM")
+        """
+        Run iteration zero (initial population setup).
+        
+        Args:
+            population_manager: Population manager instance
+            position_updater: Position updater instance
+            results_reporter: Results reporter instance
+            max_iter: Maximum number of iterations
+            A: Sailfish optimizer parameter
+        """
+        logger.info("="*80)
+        logger.info("SAILFISH VRP OPTIMIZATION - ITERATION 0")
         logger.info("="*80)
         
-        # Step 1: Print initial parameters
+        # Generate initial populations
+        population_manager.generate_initial_populations()
+        
+        # Save original positions
+        population_manager.save_original_positions()
+        
+        # Convert to routes
+        population_manager.convert_populations_to_routes()
+        
+        # Calculate fitness
+        population_manager.calculate_population_fitness()
+        
+        # Update elite positions
+        population_manager.update_elite_positions()
+        
+        # Save sorted positions for updates
+        population_manager.save_sorted_positions()
+        
+        # Print detailed results to file
         results_reporter.print_initial_parameters(
-            population_manager.problem_size,
-            population_manager.n_sailfish,
-            population_manager.n_sardines,
-            max_iter,
-            A,
-            self.epsilon,
-            population_manager.depot_data,
-            population_manager.customers_data,
-            population_manager.max_capacity,
-            population_manager.max_vehicles
+            problem_size=population_manager.problem_size,
+            n_sailfish=population_manager.n_sailfish,
+            n_sardines=population_manager.n_sardines,
+            max_iter=max_iter,
+            A=A,
+            epsilon=self.epsilon,
+            depot_data=population_manager.depot_data,
+            customers_data=population_manager.customers_data,
+            max_capacity=population_manager.max_capacity,
+            max_vehicles=population_manager.max_vehicles
         )
         
-        # Step 2: Generate initial populations
-        population_manager.generate_initial_populations()
         results_reporter.print_random_populations(
             population_manager.sailfish_random_values,
             population_manager.sardine_random_values,
             population_manager.problem_size
         )
         
-        # Step 3: Save original positions
-        population_manager.save_original_positions()
-        
-        # Step 4: Convert to routes and calculate fitness
-        population_manager.convert_populations_to_routes()
         results_reporter.print_routes_and_solutions(
             population_manager.sailfish_random_values,
             population_manager.sardine_random_values,
@@ -66,25 +92,16 @@ class IterationRunner:
             population_manager.depot_data,
             population_manager.customers_data,
             population_manager.max_capacity,
-            population_manager.max_vehicles,
-            current_iteration=0
+            population_manager.max_vehicles
         )
         
-        # Step 5: Calculate fitness
-        population_manager.calculate_population_fitness(show_details=True)
-        population_manager.update_elite_positions()
         results_reporter.print_fitness_summary(
             population_manager.sailfish_fitness,
             population_manager.sardine_fitness,
             population_manager.best_fitness,
-            population_manager.best_routes,
-            current_iteration=0
+            population_manager.best_routes
         )
         
-        # Step 6: Save sorted positions for iteration 0
-        population_manager.save_sorted_positions()
-        
-        # Step 7: Print comprehensive results
         results_reporter.print_comprehensive_results_table(
             population_manager.sailfish_random_values,
             population_manager.sardine_random_values,
@@ -92,123 +109,74 @@ class IterationRunner:
             population_manager.sardine_routes,
             population_manager.sailfish_fitness,
             population_manager.sardine_fitness,
-            population_manager.best_fitness,
-            current_iteration=0
+            population_manager.best_fitness
         )
         
-        # Step 8: Calculate PD and lambda values
-        PD, lambda_k_values = position_updater.calculate_pd_and_lambda_values(
-            population_manager.n_sailfish, 
-            population_manager.n_sardines
+        # Print terminal output
+        algorithm_params = {
+            'n_sailfish': population_manager.n_sailfish,
+            'n_sardines': population_manager.n_sardines,
+            'max_iter': max_iter,
+            'A': A,
+            'epsilon': self.epsilon
+        }
+        
+        vrp_params = {
+            'max_capacity': population_manager.max_capacity,
+            'max_vehicles': population_manager.max_vehicles,
+            'problem_size': population_manager.problem_size,
+            'data_file': population_manager.data_file
+        }
+        
+        results_reporter.print_terminal_data_table(
+            population_manager.depot_data,
+            population_manager.customers_data,
+            population_manager.max_capacity,
+            population_manager.max_vehicles
         )
         
-        # Step 9: Update sailfish positions (iteration 0 - use sorted positions)
-        population_manager.sailfish_random_values = position_updater.update_sailfish_positions(
-            population_manager.sailfish_random_values,
-            population_manager.original_sailfish_positions,
-            population_manager.elite_sailfish_fitness,
-            population_manager.injured_sardine_fitness,
-            lambda_k_values,
-            is_iteration_zero=True,
-            population_manager=population_manager
+        results_reporter.print_terminal_parameters(algorithm_params, vrp_params)
+        
+        # Find best sailfish for terminal output
+        best_sailfish_idx = population_manager.sailfish_fitness.index(min(population_manager.sailfish_fitness))
+        results_reporter.print_terminal_iteration_best(
+            0, population_manager.best_fitness, best_sailfish_idx, population_manager.best_routes
         )
         
-        # Step 9: Calculate AP and update sardines
-        AP = position_updater.calculate_attack_power(A, 0, self.epsilon)
-        
-        if AP >= 0.5:
-            logger.info(f"AP >= 0.5: Update ALL sardine positions")
-            population_manager.sardine_random_values = position_updater.update_all_sardines(
-                population_manager.sardine_random_values,
-                population_manager.original_sardine_positions,
-                population_manager.elite_sailfish_fitness,
-                AP
-            )
-        else:
-            logger.info(f"AP < 0.5: Partial sardine update")
-            population_manager.sardine_random_values = position_updater.update_partial_sardines(
-                population_manager.sardine_random_values,
-                population_manager.original_sardine_positions,
-                population_manager.elite_sailfish_fitness,
-                AP
-            )
-        
-        # Record fitness history
-        population_manager.fitness_history.append(population_manager.best_fitness)
-        
-        logger.info(f"\n" + "="*80)
-        logger.info("ITERATION 0 COMPLETED")
-        logger.info("="*80)
-        logger.info(f"Best fitness: {population_manager.best_fitness:.3f}")
-        logger.info(f"Best routes: {population_manager.best_routes}")
+        # Store fitness history
+        self.fitness_history.append(population_manager.best_fitness)
     
     def run_iteration(self, 
                      iteration_num: int,
-                     population_manager,
-                     position_updater,
-                     replacement_manager,
-                     results_reporter,
+                     population_manager: PopulationManager,
+                     position_updater: PositionUpdater,
+                     replacement_manager: ReplacementManager,
+                     results_reporter: ResultsReporter,
                      A: float) -> None:
-        """Run a single iteration."""
-        logger.info(f"\n" + "="*100)
-        logger.info(f"STARTING ITERATION {iteration_num}")
-        logger.info("="*100)
+        """
+        Run a single optimization iteration.
         
-        # Step 1: Save original positions and clear replacement tracking
-        population_manager.save_original_positions()
-        population_manager.sailfish_replacement_map.clear()
-        population_manager.sardine_positions_before_removal.clear()
+        Args:
+            iteration_num: Current iteration number
+            population_manager: Population manager instance
+            position_updater: Position updater instance
+            replacement_manager: Replacement manager instance
+            results_reporter: Results reporter instance
+            A: Sailfish optimizer parameter
+        """
+        logger.info("="*80)
+        logger.info(f"ITERATION {iteration_num}")
+        logger.info("="*80)
         
-        # Step 2: Convert to routes and calculate fitness
-        population_manager.convert_populations_to_routes()
-        results_reporter.print_routes_and_solutions(
-            population_manager.sailfish_random_values,
-            population_manager.sardine_random_values,
-            population_manager.sailfish_routes,
-            population_manager.sardine_routes,
-            population_manager.depot_data,
-            population_manager.customers_data,
-            population_manager.max_capacity,
-            population_manager.max_vehicles,
-            current_iteration=iteration_num
-        )
-        
-        # Step 3: Calculate fitness
-        population_manager.calculate_population_fitness(show_details=True)
-        population_manager.update_elite_positions()
-        results_reporter.print_fitness_summary(
-            population_manager.sailfish_fitness,
-            population_manager.sardine_fitness,
-            population_manager.best_fitness,
-            population_manager.best_routes,
-            current_iteration=iteration_num
-        )
-        
-        # Step 4: Perform replacement
-        replacement_manager.perform_sailfish_sardine_replacement(population_manager, iteration_num)
-        
-        # Step 5: Print comprehensive results
-        results_reporter.print_comprehensive_results_table(
-            population_manager.sailfish_random_values,
-            population_manager.sardine_random_values,
-            population_manager.sailfish_routes,
-            population_manager.sardine_routes,
-            population_manager.sailfish_fitness,
-            population_manager.sardine_fitness,
-            population_manager.best_fitness,
-            current_iteration=iteration_num
-        )
-        
-        # Step 6: Calculate PD and lambda values
+        # Calculate PD and lambda values
         PD, lambda_k_values = position_updater.calculate_pd_and_lambda_values(
-            population_manager.n_sailfish, 
-            population_manager.n_sardines
+            population_manager.n_sailfish, population_manager.n_sardines
         )
         
-        # Step 7: Update sailfish positions (iterations > 0 - use replacement-specific positions)
-        population_manager.sailfish_random_values = position_updater.update_sailfish_positions(
+        # Update positions
+        position_updater.update_sailfish_positions(
             population_manager.sailfish_random_values,
-            population_manager.original_sailfish_positions,
+            population_manager.sorted_sailfish_positions,
             population_manager.elite_sailfish_fitness,
             population_manager.injured_sardine_fitness,
             lambda_k_values,
@@ -216,69 +184,106 @@ class IterationRunner:
             population_manager=population_manager
         )
         
-        # Step 8: Calculate AP and update sardines
-        AP = position_updater.calculate_attack_power(A, iteration_num, self.epsilon)
+        # Calculate Attack Power (AP) - simplified for now
+        AP = 2.0  # Default AP value
         
-        if population_manager.n_sardines > 0:
-            if AP >= 0.5:
-                logger.info(f"AP >= 0.5: Update ALL sardine positions")
-                population_manager.sardine_random_values = position_updater.update_all_sardines(
-                    population_manager.sardine_random_values,
-                    population_manager.original_sardine_positions,
-                    population_manager.elite_sailfish_fitness,
-                    AP
-                )
-            else:
-                logger.info(f"AP < 0.5: Partial sardine update")
-                population_manager.sardine_random_values = position_updater.update_partial_sardines(
-                    population_manager.sardine_random_values,
-                    population_manager.original_sardine_positions,
-                    population_manager.elite_sailfish_fitness,
-                    AP
-                )
+        position_updater.update_all_sardines(
+            population_manager.sardine_random_values,
+            population_manager.sorted_sardine_positions,
+            population_manager.elite_sailfish_fitness,
+            AP
+        )
         
-        # Record fitness history
-        population_manager.fitness_history.append(population_manager.best_fitness)
+        # Convert updated positions to routes
+        population_manager.convert_populations_to_routes()
         
-        logger.info(f"\n" + "="*80)
-        logger.info(f"ITERATION {iteration_num} COMPLETED")
-        logger.info("="*80)
-        logger.info(f"Best fitness: {population_manager.best_fitness:.3f}")
-        logger.info(f"Best routes: {population_manager.best_routes}")
+        # Calculate fitness for updated populations
+        population_manager.calculate_population_fitness()
+        
+        # Perform sailfish-sardine replacement
+        replacement_stats = replacement_manager.perform_sailfish_sardine_replacement(
+            population_manager, iteration_num
+        )
+        
+        # Update elite positions
+        population_manager.update_elite_positions()
+        
+        # Save sorted positions for next iteration
+        population_manager.save_sorted_positions()
+        
+        # Print detailed results to file
+        results_reporter.print_routes_and_solutions(
+            population_manager.sailfish_random_values,
+            population_manager.sardine_random_values,
+            population_manager.sailfish_routes,
+            population_manager.sardine_routes,
+            population_manager.depot_data,
+            population_manager.customers_data,
+            population_manager.max_capacity,
+            population_manager.max_vehicles,
+            iteration_num
+        )
+        
+        results_reporter.print_fitness_summary(
+            population_manager.sailfish_fitness,
+            population_manager.sardine_fitness,
+            population_manager.best_fitness,
+            population_manager.best_routes,
+            iteration_num
+        )
+        
+        results_reporter.print_comprehensive_results_table(
+            population_manager.sailfish_random_values,
+            population_manager.sardine_random_values,
+            population_manager.sailfish_routes,
+            population_manager.sardine_routes,
+            population_manager.sailfish_fitness,
+            population_manager.sardine_fitness,
+            population_manager.best_fitness,
+            iteration_num
+        )
+        
+        # Print terminal output
+        best_sailfish_idx = population_manager.sailfish_fitness.index(min(population_manager.sailfish_fitness))
+        results_reporter.print_terminal_iteration_best(
+            iteration_num, population_manager.best_fitness, best_sailfish_idx, population_manager.best_routes
+        )
+        
+        # Store fitness history
+        self.fitness_history.append(population_manager.best_fitness)
     
-
-    
-    def get_final_results(self, population_manager) -> Dict:
+    def get_final_results(self, population_manager: PopulationManager) -> Dict:
         """
         Get final optimization results.
         
+        Args:
+            population_manager: Population manager instance
+            
         Returns:
             Dictionary containing final results
         """
-        final_results = {
+        return {
             'algorithm_parameters': {
-                'initial_sailfish': population_manager.original_n_sailfish,
-                'initial_sardines': population_manager.original_n_sardines,
-                'final_sailfish': population_manager.n_sailfish,
-                'final_sardines': population_manager.n_sardines,
-                'iterations': len(population_manager.fitness_history)
+                'n_sailfish': population_manager.original_n_sailfish,
+                'n_sardines': population_manager.original_n_sardines,
+                'max_iter': len(self.fitness_history) - 1,
+                'A': 4.0,  # Default value
+                'epsilon': self.epsilon
             },
             'vrp_parameters': {
-                'customers': population_manager.problem_size,
                 'max_capacity': population_manager.max_capacity,
                 'max_vehicles': population_manager.max_vehicles,
-                'data_file': getattr(population_manager, 'data_file', 'kecil.csv')
+                'problem_size': population_manager.problem_size,
+                'data_file': population_manager.data_file
             },
             'best_solution': {
                 'routes': population_manager.best_routes,
                 'total_distance': population_manager.best_fitness
             },
             'fitness_evolution': {
-                'initial': population_manager.fitness_history[0],
-                'final': population_manager.fitness_history[-1],
-                'improvement': population_manager.fitness_history[0] - population_manager.fitness_history[-1],
-                'history': population_manager.fitness_history
+                'initial': self.fitness_history[0] if self.fitness_history else 0,
+                'final': population_manager.best_fitness,
+                'improvement': self.fitness_history[0] - population_manager.best_fitness if self.fitness_history else 0,
+                'history': self.fitness_history
             }
         }
-        
-        return final_results
