@@ -98,9 +98,14 @@ class SailfishVRPOptimizerV2:
         )
         
         # Run subsequent iterations
+        stop_reason = "max_iterations_reached"
+        final_iteration = self.max_iter
+        
         for iteration in range(1, self.max_iter + 1):
             if self.population_manager.n_sardines == 0:
                 logger.info(f"\nNo sardines remaining after iteration {iteration-1}. Stopping.")
+                stop_reason = "no_sardines_remaining"
+                final_iteration = iteration - 1
                 break
             
             self.iteration_runner.run_iteration(
@@ -112,17 +117,20 @@ class SailfishVRPOptimizerV2:
                 A=self.A
             )
             
-            # Print terminal output for each iteration
-            best_sailfish_idx = self.population_manager.sailfish_fitness.index(min(self.population_manager.sailfish_fitness))
-            self.results_reporter.print_terminal_iteration_best(
-                iteration, self.population_manager.best_fitness, best_sailfish_idx, self.population_manager.best_routes
-            )
+            final_iteration = iteration
             
             # Only stop if sardines are empty or max iterations reached
             # Convergence check removed as per user request
         
         # Get final results
         final_results = self.iteration_runner.get_final_results(self.population_manager)
+        
+        # Add stop reason and final sardine count to results
+        final_results['optimization_info'] = {
+            'stop_reason': stop_reason,
+            'final_sardine_count': self.population_manager.n_sardines,
+            'final_iteration': final_iteration
+        }
         
         # Print final results to file
         self.results_reporter.print_final_results(

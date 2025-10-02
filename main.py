@@ -10,12 +10,12 @@ from typing import Dict
 from src.controller import VRPController
 from src.data_loader import VRPDataLoader
 from src.sailfish_optimizer_v2 import SailfishVRPOptimizerV2
-from src.utils import print_vrp_data, calculate_vrp_fitness, format_route_string, calculate_route_demand
+from src.utils import print_vrp_data, calculate_vrp_fitness, format_route_string, calculate_route_demand, print_system_header
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -30,8 +30,9 @@ def run_vrp_optimization(config: Dict) -> Dict:
     Returns:
         Dictionary containing optimization results
     """
-    # Log to file only
-    logger.info("="*80)
+    # Log to file only - print header first
+    print_system_header("file")
+    logger.info("")
     logger.info("SAILFISH VRP OPTIMIZATION SYSTEM")
     logger.info("="*80)
     logger.info(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -77,7 +78,6 @@ def run_vrp_optimization(config: Dict) -> Dict:
     print("\n🚀 Starting optimization...")
     results = optimizer.run_optimization()
     
-    # Log completion to file only
     logger.info(f"\nOptimization completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return results
 
@@ -118,6 +118,24 @@ def print_results_summary(results: Dict) -> None:
     logger.info(f"  Initial Fitness: {results['fitness_evolution']['initial']:.3f}")
     logger.info(f"  Final Fitness: {results['fitness_evolution']['final']:.3f}")
     logger.info(f"  Improvement: {results['fitness_evolution']['improvement']:.3f}")
+    
+    # Optimization information
+    if 'optimization_info' in results:
+        opt_info = results['optimization_info']
+        logger.info("\nOptimization Information:")
+        logger.info(f"  Final Sardine Count: {opt_info['final_sardine_count']}")
+        logger.info(f"  Final Iteration: {opt_info['final_iteration']}")
+        
+        # Format stop reason for log
+        stop_reason = opt_info['stop_reason']
+        if stop_reason == "max_iterations_reached":
+            reason_text = "Maximum iterations reached"
+        elif stop_reason == "no_sardines_remaining":
+            reason_text = "No sardines remaining (all replaced by sailfish)"
+        else:
+            reason_text = stop_reason.replace('_', ' ').title()
+        
+        logger.info(f"  Stop Reason: {reason_text}")
     
     logger.info("="*80)
     

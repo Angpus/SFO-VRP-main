@@ -70,7 +70,7 @@ class VRPLogger:
         # Configure logging
         logging.basicConfig(
             level=getattr(logging, log_level.upper()),
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            format='%(message)s',
             handlers=[]
         )
         

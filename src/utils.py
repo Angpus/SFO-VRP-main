@@ -11,6 +11,31 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def print_system_header(output_type: str = "terminal") -> None:
+    """
+    Print system header with title, author, and student ID.
+    
+    Args:
+        output_type: "terminal" for terminal output, "file" for file logging
+    """
+    header_lines = [
+        "="*80,
+        "Penerapan Sailfish Optimizer Algorithm untuk Menyelesaikan",
+        "Vehicle Routing Problem",
+        "",
+        "Anggun Puspitasari",
+        "082111233041",
+        "="*80
+    ]
+    
+    if output_type == "terminal":
+        for line in header_lines:
+            print(line)
+    else:  # file logging
+        for line in header_lines:
+            logger.info(line)
+
+
 def calculate_distance(point1: Dict, point2: Dict, show_calculation: bool = False, point1_name: str = "", point2_name: str = "") -> float:
     """
     Calculate Euclidean distance between two points.

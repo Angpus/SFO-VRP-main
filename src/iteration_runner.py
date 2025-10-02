@@ -9,6 +9,7 @@ from .population_manager import PopulationManager
 from .position_updater import PositionUpdater
 from .replacement_manager import ReplacementManager
 from .results_reporter import ResultsReporter
+from .utils import print_system_header
 
 logger = logging.getLogger(__name__)
 

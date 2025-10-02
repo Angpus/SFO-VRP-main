@@ -267,6 +267,24 @@ class ResultsReporter:
         logger.info(f"- Improvement: {final_results['fitness_evolution']['improvement']:.3f}")
         logger.info(f"- History: {[f'{f:.3f}' for f in final_results['fitness_evolution']['history']]}")
         
+        # Add optimization info if available
+        if 'optimization_info' in final_results:
+            opt_info = final_results['optimization_info']
+            logger.info(f"\nOptimization Information:")
+            logger.info(f"- Final Sardine Count: {opt_info['final_sardine_count']}")
+            logger.info(f"- Final Iteration: {opt_info['final_iteration']}")
+            
+            # Format stop reason for log
+            stop_reason = opt_info['stop_reason']
+            if stop_reason == "max_iterations_reached":
+                reason_text = "Maximum iterations reached"
+            elif stop_reason == "no_sardines_remaining":
+                reason_text = "No sardines remaining (all replaced by sailfish)"
+            else:
+                reason_text = stop_reason.replace('_', ' ').title()
+            
+            logger.info(f"- Stop Reason: {reason_text}")
+        
         logger.info("\n" + "="*100)
         logger.info("VRP OPTIMIZATION COMPLETED!")
         logger.info("="*100)

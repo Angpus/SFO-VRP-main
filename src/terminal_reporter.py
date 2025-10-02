@@ -5,7 +5,7 @@ Handles terminal output with simplified information display.
 
 import logging
 from typing import Dict, List
-from .utils import format_route_string, calculate_route_demand, calculate_vrp_fitness
+from .utils import format_route_string, calculate_route_demand, calculate_vrp_fitness, print_system_header
 
 logger = logging.getLogger(__name__)
 
@@ -131,5 +131,23 @@ class TerminalReporter:
         print(f"📈 Fitness Improvement: {final_results['fitness_evolution']['improvement']:.3f}")
         print(f"🔄 Total Iterations: {final_results['algorithm_parameters']['max_iter']}")
         print(f"🚛 Vehicles Used: {len([r for r in final_results['best_solution']['routes'] if r])}")
+        
+        # Add optimization info if available
+        if 'optimization_info' in final_results:
+            opt_info = final_results['optimization_info']
+            print(f"🐟 Final Sardine Count: {opt_info['final_sardine_count']}")
+            
+            # Format stop reason
+            stop_reason = opt_info['stop_reason']
+            if stop_reason == "max_iterations_reached":
+                reason_text = "Maximum iterations reached"
+            elif stop_reason == "no_sardines_remaining":
+                reason_text = "No sardines remaining (all replaced by sailfish)"
+            else:
+                reason_text = stop_reason.replace('_', ' ').title()
+            
+            print(f"🛑 Stop Reason: {reason_text}")
+            print(f"📊 Final Iteration: {opt_info['final_iteration']}")
+        
         print()
 

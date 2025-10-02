@@ -6,6 +6,7 @@ Handles terminal-based user interface for VRP optimization system.
 import os
 import logging
 from typing import Dict, Tuple
+from .utils import print_system_header
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,9 @@ class VRPController:
     
     def display_welcome_message(self) -> None:
         """Display welcome message and system information."""
-        print("\n" + "="*80)
-        print("🚢 SAILFISH VRP OPTIMIZATION SYSTEM")
+        print("\n")
+        print_system_header("terminal")
+        print("\n🚢 SAILFISH VRP OPTIMIZATION SYSTEM")
         print("="*80)
         print("Welcome to the Vehicle Routing Problem (VRP) optimization system!")
         print("This system uses the Sailfish Optimizer algorithm to solve VRP problems.")
