@@ -47,25 +47,26 @@ class IterationRunner:
         logger.info("SAILFISH VRP OPTIMIZATION - ITERATION 0")
         logger.info("="*80)
         
-        # Generate initial populations
+        # Step 1: Generate initial populations
         population_manager.generate_initial_populations()
         
-        # Save original positions
+        # Step 2: Save original positions
         population_manager.save_original_positions()
         
-        # Convert to routes
+        # Step 3: Convert to routes (sorting is done inside convert_populations_to_routes)
         population_manager.convert_populations_to_routes()
         
-        # Calculate fitness
+        # Step 4: Calculate fitness
         population_manager.calculate_population_fitness()
         
-        # Update elite positions
+        # Step 5: Update elite positions
         population_manager.update_elite_positions()
         
-        # Save sorted positions for updates
+        # Step 6: Save sorted positions for updates
         population_manager.save_sorted_positions()
         
-        # Print detailed results to file
+        # Print results in correct order for iteration 0
+        # 1. Header, data permasalahan, dan parameter
         results_reporter.print_initial_parameters(
             problem_size=population_manager.problem_size,
             n_sailfish=population_manager.n_sailfish,
@@ -79,12 +80,15 @@ class IterationRunner:
             max_vehicles=population_manager.max_vehicles
         )
         
+        # 2. Menginisiasi nilai random sebagai solusi awal
         results_reporter.print_random_populations(
             population_manager.sailfish_random_values,
             population_manager.sardine_random_values,
             population_manager.problem_size
         )
         
+        # 3. Mengurutkan (sudah dilakukan dalam convert_populations_to_routes)
+        # 4. Menentukan rute berdasarkan parameter max vehicle dan max capacity
         results_reporter.print_routes_and_solutions(
             population_manager.sailfish_random_values,
             population_manager.sardine_random_values,
@@ -96,6 +100,8 @@ class IterationRunner:
             population_manager.max_vehicles
         )
         
+        # 5. Menghitung nilai fitness dari masing masing sailfish dan Sardine
+        # 6. Menampilkan hasil nilai fitness keseluruhan beserta nilai random yang sudah diurutkan dan rutenya
         results_reporter.print_fitness_summary(
             population_manager.sailfish_fitness,
             population_manager.sardine_fitness,
@@ -112,6 +118,43 @@ class IterationRunner:
             population_manager.sardine_fitness,
             population_manager.best_fitness
         )
+        
+        # 7. Menghitung PD
+        PD, lambda_k_values = position_updater.calculate_pd_and_lambda_values(
+            population_manager.n_sailfish, population_manager.n_sardines
+        )
+        
+        # 8. Menghitung lambda untuk masing masing sailfish
+        results_reporter.print_pd_and_lambda_calculations(PD, lambda_k_values)
+        
+        # 9. Mengupdate posisi sailfish
+        updated_sailfish_positions = position_updater.update_sailfish_positions(
+            population_manager.sailfish_random_values,
+            population_manager.sorted_sailfish_positions,
+            population_manager.elite_sailfish_fitness,
+            population_manager.injured_sardine_fitness,
+            lambda_k_values,
+            is_iteration_zero=True,
+            population_manager=population_manager
+        )
+        
+        # Simpan posisi sailfish yang sudah diupdate
+        population_manager.sailfish_random_values = updated_sailfish_positions
+        
+        # 10. Menghitung nilai AP
+        AP = 2.0  # Default AP value
+        results_reporter.print_ap_calculation(AP)
+        
+        # 11. Mengupdate posisi sardine
+        updated_sardine_positions = position_updater.update_all_sardines(
+            population_manager.sardine_random_values,
+            population_manager.sorted_sardine_positions,
+            population_manager.elite_sailfish_fitness,
+            AP
+        )
+        
+        # Simpan posisi sardine yang sudah diupdate
+        population_manager.sardine_random_values = updated_sardine_positions
         
         # Print terminal output
         algorithm_params = {
@@ -140,8 +183,9 @@ class IterationRunner:
         
         # Find best sailfish for terminal output
         best_sailfish_idx = population_manager.sailfish_fitness.index(min(population_manager.sailfish_fitness))
+        current_iteration_best_fitness = min(population_manager.sailfish_fitness + population_manager.sardine_fitness)
         results_reporter.print_terminal_iteration_best(
-            0, population_manager.best_fitness, best_sailfish_idx, population_manager.best_routes
+            0, current_iteration_best_fitness, best_sailfish_idx, population_manager.best_routes
         )
         
         # Store fitness history
@@ -169,50 +213,28 @@ class IterationRunner:
         logger.info(f"ITERATION {iteration_num}")
         logger.info("="*80)
         
-        # Calculate PD and lambda values
-        PD, lambda_k_values = position_updater.calculate_pd_and_lambda_values(
-            population_manager.n_sailfish, population_manager.n_sardines
+        # Print results in correct order for iteration > 0
+        # 1. Menyajikan header, kemudian data permasalahannya, dan parameternya
+        results_reporter.print_iteration_header_and_parameters(
+            iteration_num,
+            problem_size=population_manager.problem_size,
+            n_sailfish=population_manager.n_sailfish,
+            n_sardines=population_manager.n_sardines,
+            depot_data=population_manager.depot_data,
+            customers_data=population_manager.customers_data,
+            max_capacity=population_manager.max_capacity,
+            max_vehicles=population_manager.max_vehicles
         )
         
-        # Update positions
-        position_updater.update_sailfish_positions(
+        # 2. Menginisiasi nilai random sebagai solusi awal (menggunakan posisi yang sudah diupdate dari iterasi sebelumnya)
+        results_reporter.print_random_populations(
             population_manager.sailfish_random_values,
-            population_manager.sorted_sailfish_positions,
-            population_manager.elite_sailfish_fitness,
-            population_manager.injured_sardine_fitness,
-            lambda_k_values,
-            is_iteration_zero=False,
-            population_manager=population_manager
-        )
-        
-        # Calculate Attack Power (AP) - simplified for now
-        AP = 2.0  # Default AP value
-        
-        position_updater.update_all_sardines(
             population_manager.sardine_random_values,
-            population_manager.sorted_sardine_positions,
-            population_manager.elite_sailfish_fitness,
-            AP
+            population_manager.problem_size
         )
         
-        # Convert updated positions to routes
-        population_manager.convert_populations_to_routes()
-        
-        # Calculate fitness for updated populations
-        population_manager.calculate_population_fitness()
-        
-        # Perform sailfish-sardine replacement
-        replacement_stats = replacement_manager.perform_sailfish_sardine_replacement(
-            population_manager, iteration_num
-        )
-        
-        # Update elite positions
-        population_manager.update_elite_positions()
-        
-        # Save sorted positions for next iteration
-        population_manager.save_sorted_positions()
-        
-        # Print detailed results to file
+        # 3. Mengurutkan (sudah dilakukan dalam convert_populations_to_routes)
+        # 4. Menentukan rute berdasarkan parameter max vehicle dan max capacity (menggunakan posisi yang sudah diupdate)
         results_reporter.print_routes_and_solutions(
             population_manager.sailfish_random_values,
             population_manager.sardine_random_values,
@@ -225,6 +247,8 @@ class IterationRunner:
             iteration_num
         )
         
+        # 5. Menghitung nilai fitness dari masing masing sailfish dan Sardine (menggunakan posisi yang sudah diupdate)
+        # 6. Menampilkan hasil nilai fitness keseluruhan beserta nilai random yang sudah diurutkan dan rutenya
         results_reporter.print_fitness_summary(
             population_manager.sailfish_fitness,
             population_manager.sardine_fitness,
@@ -244,10 +268,65 @@ class IterationRunner:
             iteration_num
         )
         
+        # 7. Melakukan replacement untuk nilai fitness dari sailfish yang lebih buruk ketimbang nilai sardine
+        replacement_stats = replacement_manager.perform_sailfish_sardine_replacement(
+            population_manager, iteration_num
+        )
+        
+        # 8. Menghitung PD
+        PD, lambda_k_values = position_updater.calculate_pd_and_lambda_values(
+            population_manager.n_sailfish, population_manager.n_sardines
+        )
+        
+        # 9. Menghitung lambda untuk masing masing sailfish
+        results_reporter.print_pd_and_lambda_calculations(PD, lambda_k_values)
+        
+        # 10. Mengupdate posisi sailfish
+        updated_sailfish_positions = position_updater.update_sailfish_positions(
+            population_manager.sailfish_random_values,
+            population_manager.sorted_sailfish_positions,
+            population_manager.elite_sailfish_fitness,
+            population_manager.injured_sardine_fitness,
+            lambda_k_values,
+            is_iteration_zero=False,
+            population_manager=population_manager
+        )
+        
+        # Simpan posisi sailfish yang sudah diupdate
+        population_manager.sailfish_random_values = updated_sailfish_positions
+        
+        # 11. Menghitung nilai AP
+        AP = 2.0  # Default AP value
+        results_reporter.print_ap_calculation(AP)
+        
+        # 12. Mengupdate posisi sardine
+        updated_sardine_positions = position_updater.update_all_sardines(
+            population_manager.sardine_random_values,
+            population_manager.sorted_sardine_positions,
+            population_manager.elite_sailfish_fitness,
+            AP
+        )
+        
+        # Simpan posisi sardine yang sudah diupdate
+        population_manager.sardine_random_values = updated_sardine_positions
+        
+        # Convert updated positions to routes for next iteration
+        population_manager.convert_populations_to_routes()
+        
+        # Calculate fitness for updated populations for next iteration
+        population_manager.calculate_population_fitness()
+        
+        # Update elite positions for next iteration
+        population_manager.update_elite_positions()
+        
+        # Save sorted positions for next iteration
+        population_manager.save_sorted_positions()
+        
         # Print terminal output
         best_sailfish_idx = population_manager.sailfish_fitness.index(min(population_manager.sailfish_fitness))
+        current_iteration_best_fitness = min(population_manager.sailfish_fitness + population_manager.sardine_fitness)
         results_reporter.print_terminal_iteration_best(
-            iteration_num, population_manager.best_fitness, best_sailfish_idx, population_manager.best_routes
+            iteration_num, current_iteration_best_fitness, best_sailfish_idx, population_manager.best_routes
         )
         
         # Store fitness history

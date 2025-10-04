@@ -64,6 +64,10 @@ class PopulationManager:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"sailfish_vrp_SF{n_sailfish}_S{n_sardines}_{timestamp}.txt"
             self.logger.setup_output_logger(filename)
+            
+            # Add header to file
+            from .utils import print_system_header
+            print_system_header("file")
         
         # Population storage
         self.sailfish_random_values = []

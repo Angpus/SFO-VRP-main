@@ -289,6 +289,47 @@ class ResultsReporter:
         logger.info("VRP OPTIMIZATION COMPLETED!")
         logger.info("="*100)
     
+    def print_iteration_header_and_parameters(self, 
+                                            iteration_num: int,
+                                            problem_size: int,
+                                            n_sailfish: int,
+                                            n_sardines: int,
+                                            depot_data: Dict,
+                                            customers_data: List[Dict],
+                                            max_capacity: float,
+                                            max_vehicles: int) -> None:
+        """Print iteration header and parameters for iteration > 0."""
+        logger.info("\n" + "="*80)
+        logger.info(f"ITERATION {iteration_num} - HEADER AND PARAMETERS")
+        logger.info("="*80)
+        
+        logger.info(f"Current Parameters:")
+        logger.info(f"- Problem size: {problem_size} customers")
+        logger.info(f"- Sailfish population: {n_sailfish}")
+        logger.info(f"- Sardine population: {n_sardines}")
+        logger.info("")
+        
+        print_vrp_data(depot_data, customers_data, max_capacity, max_vehicles)
+    
+    def print_pd_and_lambda_calculations(self, PD: float, lambda_k_values: List[float]) -> None:
+        """Print PD and lambda calculations."""
+        logger.info("\n" + "="*80)
+        logger.info("PD AND LAMBDA CALCULATIONS")
+        logger.info("="*80)
+        
+        logger.info(f"Population Decline (PD) = 1 - (1 / {len(lambda_k_values)}) = {PD:.6f}")
+        logger.info("")
+        logger.info("Lambda Calculations:")
+        for i, lambda_val in enumerate(lambda_k_values):
+            logger.info(f"SF{i+1}: λ_{i+1} = (2 × random × {PD:.6f}) - {PD:.6f} = {lambda_val:.6f}")
+    
+    def print_ap_calculation(self, AP: float) -> None:
+        """Print Attack Power calculation."""
+        logger.info("\n" + "="*80)
+        logger.info("ATTACK POWER (AP) CALCULATION")
+        logger.info("="*80)
+        logger.info(f"Attack Power (AP) = {AP:.6f}")
+
     def _print_detailed_route_analysis(self, 
                                      best_routes: List[List[int]], 
                                      depot_data: Dict, 
